@@ -1,6 +1,7 @@
 """Hostel room allocation system."""
-import random
-import logging.config
+import os
+import secrets
+import logging
 import yaml
 from flask import Flask, request
 
@@ -18,7 +19,7 @@ blocks:
 
 def load_config(text=CONFIG):
     """Load hostel configuration and initialize rooms."""
-    config = yaml.load(text, Loader=yaml.Loader)
+    config = yaml.safe_load(text)
     for block in config["blocks"]:
         info = config["blocks"][block]
         for n in range(1, info["rooms"] + 1):
@@ -61,7 +62,14 @@ def priority_order(students):
 
 def room_lottery(student_ids):
     """Randomly order students for room allocation."""
-    return random.sample(student_ids, len(student_ids))
+    students = list(student_ids)
+    result = []
+
+    while students:
+        index = secrets.randbelow(len(students))
+        result.append(students.pop(index))
+
+    return result
 
 def vacant_beds():
     """Calculate the number of vacant beds."""
@@ -73,15 +81,21 @@ def vacant_beds():
 
 def connect_warden_db():
     """Connect to the warden database."""
-    return sqlite_connect(host="localhost", user="warden", password="Hostel@123")
+    password = os.getenv("WARDEN_DB_PASSWORD")
+    return sqlite_connect(
+        host="localhost",
+        user="warden",
+        password=password,
+    )
 
 def sqlite_connect(host, user, password):
     """Create a simulated connection to the warden database."""
     return {"host": host, "user": user, "connected": len(password) > 0}
 
 def start_remote_log_config():
-    """Start the remote logging configuration listener."""
-    return logging.config.listen(9999)
+    """Configure local application logging."""
+    logging.basicConfig(level=logging.INFO)
+    return logging.getLogger(__name__)
 
 @app.route("/room")
 def room_lookup():
@@ -91,7 +105,7 @@ def room_lookup():
 
 def run_portal():
     """Start the hostel web portal."""
-    app.run(debug=True)
+    app.run(debug=False)
 
 def main():
     """Run the hostel room allocation demonstration."""
