@@ -1,0 +1,6 @@
+************* Module hostel_allocation
+hostel_allocation.py:36:36: W0613: Unused argument 'gender' (unused-argument)
+
+------------------------------------------------------------------
+Your code has been rated at 9.89/10 (previous run: 9.89/10, +0.00)
+
