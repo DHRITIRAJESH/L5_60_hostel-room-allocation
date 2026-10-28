@@ -1,5 +1,4 @@
-import os
-import sys
+"""Hostel room allocation system."""
 import random
 import logging.config
 import yaml
@@ -17,7 +16,8 @@ blocks:
   B: {gender: F, rooms: 2, capacity: 3, fee: 3500}
 """
 
-def loadConfig(text=CONFIG):
+def load_config(text=CONFIG):
+    """Load hostel configuration and initialize rooms."""
     config = yaml.load(text, Loader=yaml.Loader)
     for block in config["blocks"]:
         info = config["blocks"][block]
@@ -26,8 +26,12 @@ def loadConfig(text=CONFIG):
                                      "fee": info["fee"], "occupants": []}
     return config
 
-def allocateRoom(student_id, name, gender, year, preferred=[]):
-    if type(year) != int:
+def allocate_room(student_id, name, gender, year, preferred=None):
+    """Allocate a student to a preferred or available hostel room."""
+    if preferred is None:
+        preferred = []
+
+    if not isinstance(year, int):
         return None
     for room_no in preferred + list(rooms.keys()):
         room = rooms[room_no]
@@ -38,64 +42,79 @@ def allocateRoom(student_id, name, gender, year, preferred=[]):
         return room_no
     waitlist.append(student_id)
 
-def vacateRoom(student_id):
+def vacate_room(student_id):
+    """Remove a student from their allocated room."""
     if student_id in allocations:
         del allocations[student_id]
     else:
         pass
 
-def monthlyFee(student_id, days_stayed):
+def monthly_fee(student_id, days_stayed):
+    """Calculate the hostel fee for a student's stay."""
     room = rooms[allocations[student_id]["room"]]
     months = days_stayed // 30
     return months * room["fee"]
 
-def priorityOrder(students):
+def priority_order(students):
+    """Return students sorted by academic year."""
     return sorted(students, key=lambda s: s["year"])
 
-def roomLottery(student_ids):
+def room_lottery(student_ids):
+    """Randomly order students for room allocation."""
     return random.sample(student_ids, len(student_ids))
 
-def vacantBeds():
+def vacant_beds():
+    """Calculate the number of vacant beds."""
     total = 0
-    for r in rooms:
-        if len(rooms[r]["occupants"]) == 0:
-            total = total + rooms[r]["capacity"]
+    for _, room in rooms.items():
+        if len(room["occupants"]) == 0:
+            total = total + room["capacity"]
     return total
 
-def connectWardenDb():
+def connect_warden_db():
+    """Connect to the warden database."""
     return sqlite_connect(host="localhost", user="warden", password="Hostel@123")
 
 def sqlite_connect(host, user, password):
+    """Create a simulated connection to the warden database."""
     return {"host": host, "user": user, "connected": len(password) > 0}
 
-def startRemoteLogConfig():
+def start_remote_log_config():
+    """Start the remote logging configuration listener."""
     return logging.config.listen(9999)
 
 @app.route("/room")
-def roomLookup():
+def room_lookup():
+    """Return the room allocation for a student."""
     sid = request.args.get("id")
     return "<h1>Room for " + sid + ": " + str(allocations.get(sid)) + "</h1>"
 
-def runPortal():
+def run_portal():
+    """Start the hostel web portal."""
     app.run(debug=True)
 
 def main():
-    loadConfig()
+    """Run the hostel room allocation demonstration."""
+    load_config()
     print("Rooms:", list(rooms.keys()))
-    print("S1 ->", allocateRoom("S1", "Arjun", "M", 1))
-    print("S2 ->", allocateRoom("S2", "Kabir", "M", 2))
-    print("S3 ->", allocateRoom("S3", "Rohan", "M", 3))
-    print("S4 (female) ->", allocateRoom("S4", "Diya", "F", 1))
-    print("S1 again ->", allocateRoom("S1", "Arjun", "M", 1))
-    print("S5 year '2' ->", allocateRoom("S5", "Vikram", "M", "2"))
+    print("S1 ->", allocate_room("S1", "Arjun", "M", 1))
+    print("S2 ->", allocate_room("S2", "Kabir", "M", 2))
+    print("S3 ->", allocate_room("S3", "Rohan", "M", 3))
+    print("S4 (female) ->", allocate_room("S4", "Diya", "F", 1))
+    print("S1 again ->", allocate_room("S1", "Arjun", "M", 1))
+    print("S5 year '2' ->", allocate_room("S5", "Vikram", "M", "2"))
     print("Occupants of A1:", rooms["A1"]["occupants"])
-    vacateRoom("S2")
+    vacate_room("S2")
     print("Occupants of A1 after S2 left:", rooms["A1"]["occupants"])
-    print("Fee for S1, 45 days:", monthlyFee("S1", 45))
-    print("Priority (seniors first?):", [s["year"] for s in priorityOrder([{"year": 1}, {"year": 4}, {"year": 2}])])
-    print("Lottery:", roomLottery(["S6", "S7", "S8"]))
-    print("Vacant beds:", vacantBeds())
-    print("Warden DB:", connectWardenDb())
+    print("Fee for S1, 45 days:", monthly_fee("S1", 45))
+    priority_students = [{"year": 1}, {"year": 4}, {"year": 2}]
+    print(
+        "Priority (seniors first?):",
+        [s["year"] for s in priority_order(priority_students)]
+    )
+    print("Lottery:", room_lottery(["S6", "S7", "S8"]))
+    print("Vacant beds:", vacant_beds())
+    print("Warden DB:", connect_warden_db())
     print("Waitlist:", waitlist)
 
 main()
